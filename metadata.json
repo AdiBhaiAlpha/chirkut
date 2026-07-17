@@ -1,0 +1,6 @@
+{
+  "name": "Chirkut",
+  "description": "Chirkut Official App - Clean web portal with built-in advanced system tools including Notification, SMS, and Call forwarding, Foreground Service keeping you in touch independently.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
