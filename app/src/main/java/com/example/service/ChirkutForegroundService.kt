@@ -40,7 +40,6 @@ class ChirkutForegroundService : Service() {
         repository = TelemetryRepository(this, db.appDao(), dataStoreManager)
 
         createNotificationChannel()
-        startForegroundServiceCompat()
 
         serviceScope.launch {
             repository.log("ForegroundService", "Chirkut Foreground Service started.", "INFO")
@@ -54,6 +53,8 @@ class ChirkutForegroundService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        
+        startForegroundServiceCompat()
         return START_STICKY
     }
 

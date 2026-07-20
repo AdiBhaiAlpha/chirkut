@@ -25,18 +25,17 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH")
-      val storePass = System.getenv("STORE_PASSWORD")
-      val keyAl = System.getenv("KEY_ALIAS") ?: "upload"
-      val keyPass = System.getenv("KEY_PASSWORD")
+      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${projectDir}/release.keystore"
+      val storePass = System.getenv("STORE_PASSWORD") ?: "chirkut2026"
+      val keyAl = System.getenv("KEY_ALIAS") ?: "releaseKey"
+      val keyPass = System.getenv("KEY_PASSWORD") ?: "chirkut2026"
 
-      if (!keystorePath.isNullOrEmpty() && file(keystorePath).exists() && !storePass.isNullOrEmpty() && !keyPass.isNullOrEmpty()) {
+      if (file(keystorePath).exists()) {
         storeFile = file(keystorePath)
         storePassword = storePass
         keyAlias = keyAl
         keyPassword = keyPass
       } else {
-        // Fallback to debug configuration so GitHub Actions can successfully generate a release APK without manual editing
         storeFile = file("${rootDir}/debug.keystore")
         storePassword = "android"
         keyAlias = "androiddebugkey"
@@ -53,8 +52,9 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      isCrunchPngs = true
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }

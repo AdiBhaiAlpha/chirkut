@@ -70,45 +70,48 @@ class NotificationForwarderService : NotificationListenerService() {
                 if (!enabled) return@launch
 
                 val extras = sbn.notification.extras
-                var title = extras.getString(Notification.EXTRA_TITLE) ?: ""
+                val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
                 var text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
                 val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
                 val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
                 val summary = extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString() ?: ""
 
-                var extractedFromMessagingStyle = false
-                // Extract better details for messaging apps like WhatsApp/Messenger
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
-                    if (messages != null && messages.isNotEmpty()) {
-                        try {
-                            val msgs = Notification.MessagingStyle.Message.getMessagesFromBundleArray(messages)
-                            if (msgs.isNotEmpty()) {
-                                extractedFromMessagingStyle = true
-                                val lastMsg = msgs.last()
-                                val msgBody = lastMsg.text?.toString()
-                                if (!msgBody.isNullOrBlank()) {
-                                    text = msgBody
-                                }
-                                val senderName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                    lastMsg.senderPerson?.name?.toString()
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    lastMsg.sender?.toString()
-                                }
-                                
-                                val isGroup = extras.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION, false)
-                                val conversationTitle = extras.getString(Notification.EXTRA_CONVERSATION_TITLE)
-                                
-                                if (isGroup && !conversationTitle.isNullOrBlank()) {
-                                    title = if (!senderName.isNullOrBlank()) "$conversationTitle ($senderName)" else conversationTitle
-                                } else if (!senderName.isNullOrBlank()) {
-                                    title = senderName!!
-                                }
+                var sender = title
+                var finalMessage = if (bigText.isNotBlank()) bigText else text
+
+                // Intercept WhatsApp and Messenger MessagingStyle
+                val isMessagingStyle = extras.getString(Notification.EXTRA_TEMPLATE) == "android.app.Notification\$MessagingStyle" || 
+                                       extras.getString(Notification.EXTRA_TEMPLATE) == "androidx.core.app.NotificationCompat\$MessagingStyle"
+                
+                if (isMessagingStyle) {
+                    val conversationTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+                    val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES) as? Array<android.os.Parcelable>
+                    
+                    if (!messages.isNullOrEmpty()) {
+                        val lastMessageBundle = messages.last() as? android.os.Bundle
+                        if (lastMessageBundle != null) {
+                            val msgText = lastMessageBundle.getCharSequence("text")?.toString()
+                            
+                            var senderName: String? = null
+                            val senderPerson = lastMessageBundle.getParcelable("sender_person") as? android.app.Person
+                            if (senderPerson != null) {
+                                senderName = senderPerson.name?.toString()
                             }
-                        } catch (e: Exception) {
-                            // Fallback to default extraction
+                            if (senderName == null) {
+                                senderName = lastMessageBundle.getCharSequence("sender")?.toString()
+                            }
+                            
+                            if (msgText != null) {
+                                finalMessage = msgText
+                            }
+                            if (senderName != null) {
+                                sender = senderName
+                            }
                         }
+                    }
+                    
+                    if (conversationTitle != null && conversationTitle.isNotBlank()) {
+                        sender = "$sender (Group: $conversationTitle)"
                     }
                 }
 
@@ -121,18 +124,10 @@ class NotificationForwarderService : NotificationListenerService() {
                 }
 
                 // Skip blank notifications
-                if (title.isBlank() && text.isBlank()) return@launch
+                if (sender.isBlank() && finalMessage.isBlank()) return@launch
 
                 val timestamp = sbn.postTime
                 val timeStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
-
-                val displayMsg = if (extractedFromMessagingStyle && text.isNotBlank()) {
-                    text
-                } else if (bigText.isNotBlank()) {
-                    bigText
-                } else {
-                    text
-                }
                 
                 // Detailed text to comply with "Capture extra"
                 val extraText = buildString {
@@ -145,8 +140,8 @@ class NotificationForwarderService : NotificationListenerService() {
                 val message = """
                     📱 *New Notification*
                     *Application:* $appName
-                    *Title:* $title
-                    *Message:* $displayMsg$extraText
+                    *Sender/Title:* $sender
+                    *Message:* $finalMessage$extraText
                     *Time:* $timeStr
                     *Package:* $pack
                 """.trimIndent()

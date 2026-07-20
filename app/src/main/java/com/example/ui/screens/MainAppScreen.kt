@@ -115,6 +115,18 @@ fun MainAppScreen(
 
         if (!isNotificationServiceEnabled(context)) {
             showNotificationPermissionDialog = true
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                    try {
+                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = android.net.Uri.parse("package:${context.packageName}")
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {}
+                }
+            }
         }
 
         // Restart Foreground Service to pick up newly granted permissions dynamically
@@ -138,6 +150,21 @@ fun MainAppScreen(
             permissionLauncher.launch(permissionsToRequest)
         } else if (!isNotificationServiceEnabled(context)) {
             showNotificationPermissionDialog = true
+        } else {
+            // Check battery optimization
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                    try {
+                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = android.net.Uri.parse("package:${context.packageName}")
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }
+            }
         }
     }
 
@@ -169,7 +196,7 @@ fun MainAppScreen(
                 },
                 navigationIcon = {
                     Image(
-                        painter = painterResource(id = R.drawable.img_app_logo),
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
                         contentDescription = "Chirkut Logo",
                         modifier = Modifier
                             .padding(start = 12.dp, end = 8.dp)
