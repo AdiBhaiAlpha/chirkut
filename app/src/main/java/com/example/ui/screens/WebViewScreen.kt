@@ -85,6 +85,7 @@ fun WebViewScreen(
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
 
+                        @Suppress("DEPRECATION")
                         settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
@@ -103,6 +104,7 @@ fun WebViewScreen(
                         }
 
                         // Native Dark Mode Toggle
+                        @Suppress("DEPRECATION")
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             val isDark = (ctx.resources.configuration.uiMode and 
                                     android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 

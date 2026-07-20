@@ -30,7 +30,9 @@ class CallReceiver : BroadcastReceiver() {
         val dataStoreManager = DataStoreManager(context)
         val repository = TelemetryRepository(context, db.appDao(), dataStoreManager)
 
-        if (intent.action == Intent.ACTION_NEW_OUTGOING_CALL) {
+        @Suppress("DEPRECATION")
+        val actionNewOutgoingCall = Intent.ACTION_NEW_OUTGOING_CALL
+        if (intent.action == actionNewOutgoingCall) {
             val number = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER) ?: return
             savedNumber = number
             isIncoming = false
@@ -46,6 +48,7 @@ class CallReceiver : BroadcastReceiver() {
 
         if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
             val stateStr = intent.getStringExtra(TelephonyManager.EXTRA_STATE) ?: return
+            @Suppress("DEPRECATION")
             val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
             
             val state = when (stateStr) {

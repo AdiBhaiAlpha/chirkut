@@ -31,6 +31,16 @@ jobs:
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
         fi
 
+    - name: Decode Release Keystore
+      run: |
+        if [ -f "app/release.keystore.base64" ]; then
+          echo "Decoding app/release.keystore.base64..."
+          base64 -d app/release.keystore.base64 > app/release.keystore
+        else
+          echo "Generating a new release.keystore for fallback..."
+          keytool -genkey -v -keystore app/release.keystore -alias releaseKey -keyalg RSA -keysize 2048 -validity 10000 -storepass "dummy_pass" -keypass "dummy_pass" -dname "CN=Chirkut, OU=Chirkut, O=Chirkut, L=Dhaka, ST=Dhaka, C=BD"
+        fi
+
     - name: Validate and Repair Gradle Wrapper
       run: |
         if ! jar tf gradle/wrapper/gradle-wrapper.jar > /dev/null 2>&1; then
@@ -56,6 +66,10 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Release APK
+      env:
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: ./gradlew assembleRelease --stacktrace
 
     - name: Find and Upload Release APK

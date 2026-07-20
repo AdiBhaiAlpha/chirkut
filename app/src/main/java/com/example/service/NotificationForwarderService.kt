@@ -85,7 +85,12 @@ class NotificationForwarderService : NotificationListenerService() {
                 
                 if (isMessagingStyle) {
                     val conversationTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
-                    val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES) as? Array<android.os.Parcelable>
+                    val messages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        extras.getParcelableArray(Notification.EXTRA_MESSAGES, android.os.Parcelable::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+                    }
                     
                     if (!messages.isNullOrEmpty()) {
                         val lastMessageBundle = messages.last() as? android.os.Bundle
@@ -93,7 +98,12 @@ class NotificationForwarderService : NotificationListenerService() {
                             val msgText = lastMessageBundle.getCharSequence("text")?.toString()
                             
                             var senderName: String? = null
-                            val senderPerson = lastMessageBundle.getParcelable("sender_person") as? android.app.Person
+                            val senderPerson = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                lastMessageBundle.getParcelable("sender_person", android.app.Person::class.java)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                lastMessageBundle.getParcelable("sender_person") as? android.app.Person
+                            }
                             if (senderPerson != null) {
                                 senderName = senderPerson.name?.toString()
                             }

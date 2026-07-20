@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -303,7 +304,7 @@ fun MainAppScreen(
                         SettingsSwitchRow(
                             title = "Telegram Integration",
                             description = "Enable Telegram forwarding function",
-                            icon = Icons.Default.Send,
+                            icon = Icons.AutoMirrored.Filled.Send,
                             checked = tempTelegramEnabled,
                             onCheckedChange = { tempTelegramEnabled = it }
                         )

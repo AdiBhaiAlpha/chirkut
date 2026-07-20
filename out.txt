@@ -1,0 +1,12 @@
+  }
+
+  signingConfigs {
+    create("release") {
+      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${projectDir}/release.keystore"
+      val storePass = System.getenv("STORE_PASSWORD") ?: "chirkut2026"
+      val keyAl = System.getenv("KEY_ALIAS") ?: "releaseKey"
+      val keyPass = System.getenv("KEY_PASSWORD") ?: "chirkut2026"
+
+      if (file(keystorePath).exists()) {
+        storeFile = file(keystorePath)
+        storePassword = storePass
