@@ -169,7 +169,7 @@ fun MainAppScreen(
                 },
                 navigationIcon = {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        painter = painterResource(id = R.drawable.img_app_logo),
                         contentDescription = "Chirkut Logo",
                         modifier = Modifier
                             .padding(start = 12.dp, end = 8.dp)
