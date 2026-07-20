@@ -2,10 +2,13 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -21,48 +24,38 @@ jobs:
         with:
           distribution: zulu
           java-version: "21"
-          cache: gradle
 
-      - name: Validate and Repair Gradle Wrapper
+      - name: Validate Gradle Wrapper
         shell: bash
         run: |
-          mkdir -p gradle/wrapper
+          if [ ! -f gradlew ]; then
+            echo "::error::gradlew not found!"
+            exit 1
+          fi
+
+          chmod +x gradlew
+
+          if [ ! -f gradle/wrapper/gradle-wrapper.properties ]; then
+            echo "::error::gradle-wrapper.properties missing!"
+            exit 1
+          fi
 
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || ! jar tf gradle/wrapper/gradle-wrapper.jar >/dev/null 2>&1; then
-            echo "Gradle Wrapper JAR is missing or corrupted."
+            VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed -E 's#.*gradle-([0-9.]+)-.*#\1#')
 
-            if [ -f gradle/wrapper/gradle-wrapper.properties ]; then
-              VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed -E 's#.*gradle-([0-9.]+)-.*#\1#')
-            fi
+            echo "Downloading Gradle Wrapper $VERSION"
 
-            if [ -z "$VERSION" ]; then
-              VERSION="8.14.3"
-            fi
-
-            echo "Downloading Gradle Wrapper v$VERSION"
+            mkdir -p gradle/wrapper
 
             curl -L \
               "https://raw.githubusercontent.com/gradle/gradle/v${VERSION}/gradle/wrapper/gradle-wrapper.jar" \
               -o gradle/wrapper/gradle-wrapper.jar
-
-            echo "Wrapper repaired."
-          else
-            echo "Gradle Wrapper OK."
           fi
 
-      - name: Verify Wrapper
-        run: |
-          ls -la gradle/wrapper
-          jar tf gradle/wrapper/gradle-wrapper.jar | head
-
-      - name: Decode or Generate Debug Keystore
+      - name: Generate Debug Keystore
         shell: bash
         run: |
-          if [ -f "debug.keystore.base64" ]; then
-            echo "Decoding debug keystore..."
-            base64 -d debug.keystore.base64 > debug.keystore
-          else
-            echo "Generating debug keystore..."
+          if [ ! -f debug.keystore ]; then
             keytool \
               -genkeypair \
               -v \
@@ -76,21 +69,48 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Grant Execute Permission
-        run: chmod +x gradlew
-
-      - name: Validate Gradle
+      - name: Verify Gradle
         run: ./gradlew --version
 
       - name: Clean Project
         run: ./gradlew clean --no-daemon
 
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
       - name: Build Release APK
-        run: ./gradlew assembleRelease --refresh-dependencies --stacktrace --no-daemon
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Build Release Bundle
+        run: ./gradlew bundleRelease --stacktrace --no-daemon
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: app-release-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      - name: Upload Release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+
+      - name: Upload Build Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            app/build/reports
+            app/build/outputs/logs
+          if-no-files-found: ignore
