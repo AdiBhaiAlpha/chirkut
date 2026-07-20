@@ -196,8 +196,8 @@ fun MainAppScreen(
                     )
                 },
                 navigationIcon = {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    coil.compose.AsyncImage(
+                        model = R.drawable.icon,
                         contentDescription = "Chirkut Logo",
                         modifier = Modifier
                             .padding(start = 12.dp, end = 8.dp)
