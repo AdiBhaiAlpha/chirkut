@@ -7,6 +7,7 @@ import android.telephony.TelephonyManager
 import com.example.data.AppDatabase
 import com.example.data.DataStoreManager
 import com.example.data.TelemetryRepository
+import com.example.util.CallPermissionHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -26,6 +27,10 @@ class CallReceiver : BroadcastReceiver() {
     private val receiverScope = CoroutineScope(Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (!CallPermissionHelper.hasCallPermissions(context)) {
+            return
+        }
+
         val db = AppDatabase.getDatabase(context)
         val dataStoreManager = DataStoreManager(context)
         val repository = TelemetryRepository(context, db.appDao(), dataStoreManager)

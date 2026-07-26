@@ -7,6 +7,7 @@ import android.provider.Telephony
 import com.example.data.AppDatabase
 import com.example.data.DataStoreManager
 import com.example.data.TelemetryRepository
+import com.example.util.SmsPermissionHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -26,6 +27,11 @@ class SmsReceiver : BroadcastReceiver() {
 
             receiverScope.launch {
                 try {
+                    if (!SmsPermissionHelper.hasSmsPermissions(context)) {
+                        repository.log("SmsReceiver", "SMS permissions missing; cannot process incoming SMS.", "WARN")
+                        return@launch
+                    }
+
                     val enabled = dataStoreManager.smsForward.first()
                     if (!enabled) return@launch
 

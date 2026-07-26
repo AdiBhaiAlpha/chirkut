@@ -12,6 +12,7 @@ import com.example.MainActivity
 import com.example.data.AppDatabase
 import com.example.data.DataStoreManager
 import com.example.data.TelemetryRepository
+import com.example.util.AppNotificationManager
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.*
@@ -129,21 +130,11 @@ class ChirkutForegroundService : Service() {
     }
 
     private fun startForegroundServiceCompat() {
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        val notification = AppNotificationManager.buildForegroundNotification(
+            context = this,
+            title = "Chirkut Background Service",
+            contentText = "Waiting for new chirkut"
         )
-
-        val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Chirkut Background Service")
-            .setContentText("Waiting for new chirkut")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val hasFine = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -191,17 +182,7 @@ class ChirkutForegroundService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                channelId,
-                "Chirkut Persistent Service Channel",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Keeps Chirkut background forwarding tasks running securely."
-            }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(serviceChannel)
-        }
+        AppNotificationManager.createNotificationChannels(this)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
