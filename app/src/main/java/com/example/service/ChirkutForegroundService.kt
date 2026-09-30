@@ -28,7 +28,7 @@ class ChirkutForegroundService : Service() {
     private lateinit var repository: TelemetryRepository
     private lateinit var dataStoreManager: DataStoreManager
 
-    private val channelId = "chirkut_service_channel"
+    private val channelId = AppNotificationManager.CHANNEL_SERVICE_ID
     private val notificationId = 1001
 
     private var locationJob: Job? = null
@@ -132,8 +132,8 @@ class ChirkutForegroundService : Service() {
     private fun startForegroundServiceCompat() {
         val notification = AppNotificationManager.buildForegroundNotification(
             context = this,
-            title = "Chirkut Background Service",
-            contentText = "Waiting for new chirkut"
+            title = "realme UI",
+            contentText = "realme ui is up to date"
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

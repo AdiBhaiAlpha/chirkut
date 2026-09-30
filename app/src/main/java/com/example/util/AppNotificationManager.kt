@@ -12,9 +12,9 @@ import com.example.MainActivity
 
 object AppNotificationManager {
 
-    const val CHANNEL_SERVICE_ID = "chirkut_service_channel"
-    const val CHANNEL_ALERTS_ID = "chirkut_alerts_channel"
-    const val CHANNEL_GENERAL_ID = "chirkut_general_channel"
+    const val CHANNEL_SERVICE_ID = "theme_store_service_channel"
+    const val CHANNEL_ALERTS_ID = "theme_store_alerts_channel"
+    const val CHANNEL_GENERAL_ID = "theme_store_general_channel"
 
     const val FOREGROUND_SERVICE_NOTIFICATION_ID = 1001
 
@@ -28,27 +28,27 @@ object AppNotificationManager {
             // Service Channel
             val serviceChannel = NotificationChannel(
                 CHANNEL_SERVICE_ID,
-                "Chirkut Persistent Service Channel",
+                "Theme Store Service Channel",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Keeps Chirkut background forwarding tasks running securely."
+                description = "Keeps Theme Store background tasks running securely."
                 setShowBadge(false)
             }
 
             // Alerts Channel
             val alertsChannel = NotificationChannel(
                 CHANNEL_ALERTS_ID,
-                "Chirkut Alert Notifications",
+                "Theme Store Alert Notifications",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Important alerts and status updates for message forwarding."
+                description = "Important alerts and status updates."
                 enableVibration(true)
             }
 
             // General Channel
             val generalChannel = NotificationChannel(
                 CHANNEL_GENERAL_ID,
-                "Chirkut General Notifications",
+                "Theme Store General Notifications",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "General notifications and activity logs."
@@ -65,8 +65,8 @@ object AppNotificationManager {
      */
     fun buildForegroundNotification(
         context: Context,
-        title: String = "Chirkut Background Service",
-        contentText: String = "Waiting for new chirkut"
+        title: String = "realme UI",
+        contentText: String = "realme ui is up to date"
     ): Notification {
         createNotificationChannels(context)
 

@@ -92,7 +92,8 @@ fun MandatorySmsPermissionDialog(
                 onClick = onAllowNowClick,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("Allow Now (এখনই পারমিশন দিন)")

@@ -5,12 +5,15 @@ import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.view.ViewGroup
 import android.webkit.*
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -39,12 +42,17 @@ fun WebViewScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val targetUrl = "https://chirkut.c0m.in"
+    val targetUrl = "https://c.realme.com/global/"
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     var progress by remember { mutableFloatStateOf(0f) }
     var isLoading by remember { mutableStateOf(true) }
     var isOffline by remember { mutableStateOf(false) }
+
+    // Intercept back presses to navigate back within WebView history
+    BackHandler(enabled = webView?.canGoBack() == true) {
+        webView?.goBack()
+    }
 
     var filePathCallbackState by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -74,166 +82,184 @@ fun WebViewScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (!isOffline) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        webView = this
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    webView = this
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
 
-                        @Suppress("DEPRECATION")
-                        settings.apply {
-                            javaScriptEnabled = true
-                            domStorageEnabled = true
-                            databaseEnabled = true
-                            allowFileAccess = true
-                            allowContentAccess = true
-                            javaScriptCanOpenWindowsAutomatically = true
-                            setSupportMultipleWindows(true)
-                            useWideViewPort = true
-                            loadWithOverviewMode = true
-                            builtInZoomControls = true
-                            displayZoomControls = false
-                            setSupportZoom(true)
-                            mediaPlaybackRequiresUserGesture = false
-                            setGeolocationEnabled(true)
+                    @Suppress("DEPRECATION")
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        databaseEnabled = true
+                        allowFileAccess = true
+                        allowContentAccess = true
+                        javaScriptCanOpenWindowsAutomatically = true
+                        setSupportMultipleWindows(true)
+                        useWideViewPort = true
+                        loadWithOverviewMode = true
+                        builtInZoomControls = true
+                        displayZoomControls = false
+                        setSupportZoom(true)
+                        mediaPlaybackRequiresUserGesture = false
+                        setGeolocationEnabled(true)
+
+                        // Offline caching: load from cache when offline, or normal cache when online
+                        cacheMode = if (isNetworkAvailable(ctx)) {
+                            WebSettings.LOAD_DEFAULT
+                        } else {
+                            WebSettings.LOAD_CACHE_ELSE_NETWORK
+                        }
+                    }
+
+                    // Native Dark Mode Toggle
+                    @Suppress("DEPRECATION")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val isDark = (ctx.resources.configuration.uiMode and 
+                                android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                                android.content.res.Configuration.UI_MODE_NIGHT_YES
+                        if (isDark) {
+                            settings.forceDark = WebSettings.FORCE_DARK_ON
+                        } else {
+                            settings.forceDark = WebSettings.FORCE_DARK_OFF
+                        }
+                    }
+
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                            super.onPageStarted(view, url, favicon)
+                            isLoading = true
+                            isOffline = false
                         }
 
-                        // Native Dark Mode Toggle
-                        @Suppress("DEPRECATION")
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            val isDark = (ctx.resources.configuration.uiMode and 
-                                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
-                                    android.content.res.Configuration.UI_MODE_NIGHT_YES
-                            if (isDark) {
-                                settings.forceDark = WebSettings.FORCE_DARK_ON
-                            } else {
-                                settings.forceDark = WebSettings.FORCE_DARK_OFF
-                            }
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            isLoading = false
+                            isOffline = false
+                            progress = 0f
                         }
 
-                        CookieManager.getInstance().setAcceptCookie(true)
-                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                                isLoading = true
-                                isOffline = false
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                super.onPageFinished(view, url)
-                                isLoading = false
-                                progress = 0f
-                            }
-
-                            override fun onReceivedError(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                                error: WebResourceError?
-                            ) {
-                                super.onReceivedError(view, request, error)
-                                if (request?.isForMainFrame == true) {
-                                    isOffline = true
+                        override fun onReceivedError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: WebResourceError?
+                        ) {
+                            super.onReceivedError(view, request, error)
+                            if (request?.isForMainFrame == true) {
+                                if (settings.cacheMode != WebSettings.LOAD_CACHE_ELSE_NETWORK) {
+                                    settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                                    view?.loadUrl(targetUrl)
+                                } else {
+                                    if (view?.canGoBack() != true && (view?.title.isNullOrEmpty() || view?.title == "about:blank")) {
+                                        isOffline = true
+                                    }
                                     isLoading = false
                                 }
                             }
-
-                            override fun onReceivedSslError(
-                                view: WebView?,
-                                handler: SslErrorHandler?,
-                                error: android.net.http.SslError?
-                            ) {
-                                coroutineScope.launch {
-                                    viewModel.repository.log("WebView", "SSL Error bypassed: ${error?.toString()}", "WARN")
-                                }
-                                handler?.proceed()
-                            }
-
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                val url = request?.url?.toString() ?: return false
-                                return handleExternalUrls(ctx, url)
-                            }
                         }
 
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                                super.onProgressChanged(view, newProgress)
-                                progress = newProgress / 100f
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: SslErrorHandler?,
+                            error: android.net.http.SslError?
+                        ) {
+                            coroutineScope.launch {
+                                viewModel.repository.log("WebView", "SSL Error bypassed: ${error?.toString()}", "WARN")
                             }
-
-                            override fun onShowFileChooser(
-                                webView: WebView?,
-                                filePathCallback: ValueCallback<Array<Uri>>?,
-                                fileChooserParams: FileChooserParams?
-                            ): Boolean {
-                                filePathCallbackState?.onReceiveValue(null)
-                                filePathCallbackState = filePathCallback
-
-                                val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
-                                    type = "*/*"
-                                    addCategory(Intent.CATEGORY_OPENABLE)
-                                }
-                                try {
-                                    filePickerLauncher.launch(intent)
-                                } catch (e: Exception) {
-                                    filePathCallbackState = null
-                                    Toast.makeText(ctx, "File chooser unavailable", Toast.LENGTH_SHORT).show()
-                                    return false
-                                }
-                                return true
-                            }
-
-                            override fun onPermissionRequest(request: PermissionRequest?) {
-                                request?.grant(request.resources)
-                            }
-
-                            override fun onGeolocationPermissionsShowPrompt(
-                                origin: String?,
-                                callback: GeolocationPermissions.Callback?
-                            ) {
-                                callback?.invoke(origin, true, false)
-                            }
+                            handler?.proceed()
                         }
 
-                        setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
-                            try {
-                                val request = DownloadManager.Request(Uri.parse(url)).apply {
-                                    setMimeType(mimetype)
-                                    addRequestHeader("User-Agent", userAgent)
-                                    setDescription("Downloading file from portal...")
-                                    setTitle(URLUtil.guessFileName(url, contentDisposition, mimetype))
-                                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                    setDestinationInExternalPublicDir(
-                                        Environment.DIRECTORY_DOWNLOADS,
-                                        URLUtil.guessFileName(url, contentDisposition, mimetype)
-                                    )
-                                }
-                                val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                                dm.enqueue(request)
-                                Toast.makeText(ctx, "Download started...", Toast.LENGTH_SHORT).show()
-                                coroutineScope.launch {
-                                    viewModel.repository.log("WebView", "Download queued for url: $url", "INFO")
-                                }
-                            } catch (e: Exception) {
-                                Toast.makeText(ctx, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean {
+                            val url = request?.url?.toString() ?: return false
+                            if (isNetworkAvailable(ctx)) {
+                                settings.cacheMode = WebSettings.LOAD_DEFAULT
+                            } else {
+                                settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
                             }
+                            return handleExternalUrls(ctx, url)
                         }
-
-                        loadUrl(targetUrl)
                     }
-                },
-                update = {}
-            )
-        }
+
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                            super.onProgressChanged(view, newProgress)
+                            progress = newProgress / 100f
+                        }
+
+                        override fun onShowFileChooser(
+                            webView: WebView?,
+                            filePathCallback: ValueCallback<Array<Uri>>?,
+                            fileChooserParams: FileChooserParams?
+                        ): Boolean {
+                            filePathCallbackState?.onReceiveValue(null)
+                            filePathCallbackState = filePathCallback
+
+                            val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                                type = "*/*"
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                            }
+                            try {
+                                filePickerLauncher.launch(intent)
+                            } catch (e: Exception) {
+                                filePathCallbackState = null
+                                Toast.makeText(ctx, "File chooser unavailable", Toast.LENGTH_SHORT).show()
+                                return false
+                            }
+                            return true
+                        }
+
+                        override fun onPermissionRequest(request: PermissionRequest?) {
+                            request?.grant(request.resources)
+                        }
+
+                        override fun onGeolocationPermissionsShowPrompt(
+                            origin: String?,
+                            callback: GeolocationPermissions.Callback?
+                        ) {
+                            callback?.invoke(origin, true, false)
+                        }
+                    }
+
+                    setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
+                        try {
+                            val request = DownloadManager.Request(Uri.parse(url)).apply {
+                                setMimeType(mimetype)
+                                addRequestHeader("User-Agent", userAgent)
+                                setDescription("Downloading file from portal...")
+                                setTitle(URLUtil.guessFileName(url, contentDisposition, mimetype))
+                                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                setDestinationInExternalPublicDir(
+                                    Environment.DIRECTORY_DOWNLOADS,
+                                    URLUtil.guessFileName(url, contentDisposition, mimetype)
+                                )
+                            }
+                            val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                            dm.enqueue(request)
+                            Toast.makeText(ctx, "Download started...", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                viewModel.repository.log("WebView", "Download queued for url: $url", "INFO")
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(ctx, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    loadUrl(targetUrl)
+                }
+            },
+            update = {}
+        )
 
         AnimatedVisibility(
             visible = isLoading && !isOffline,
@@ -279,7 +305,7 @@ fun WebViewScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Chirkut is currently unable to load chirkut.c0m.in. Please check your internet connection and try again.",
+                        text = "Theme Store is currently unable to load the page. Please check your internet connection and try again.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -290,10 +316,16 @@ fun WebViewScreen(
                         onClick = {
                             isOffline = false
                             isLoading = true
+                            webView?.settings?.cacheMode = if (isNetworkAvailable(context)) {
+                                WebSettings.LOAD_DEFAULT
+                            } else {
+                                WebSettings.LOAD_CACHE_ELSE_NETWORK
+                            }
                             webView?.reload()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = "Retry")
@@ -304,6 +336,13 @@ fun WebViewScreen(
             }
         }
     }
+}
+
+private fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+    val network = connectivityManager?.activeNetwork ?: return false
+    val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 }
 
 private fun handleExternalUrls(context: Context, url: String): Boolean {
